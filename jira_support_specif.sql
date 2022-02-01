@@ -1,4 +1,4 @@
-create or replace package jira_exchange_support as
+create or replace package jira_support as
 
 is_debug$i      integer:=0;
 
@@ -41,3 +41,10 @@ function create_issue (key$c varchar2 := null --куда создаем зада
                       ,components$i integer := null --если есть компонента, здесь указываем ее ID
                       ,other_params$c varchar2 := null --возможно нужно будет указывать и другие параметры
                       ) return jira_arr;
+
+-- прочитать заявку из Jira         
+function get_jira_issue(key_name$c   varchar2:=null
+                        ) return clob;
+
+end jira_support;
+
