@@ -313,5 +313,38 @@ exception
       ||' key_name$c='||key_name$c);
 end get_jira_issue;    
 
+-- добавить связь
+procedure add_link(key_name$c varchar2:=null
+                  ,link_key_name$c varchar2:=null
+                  ,link_type$c varchar2:=jira_consts.c_link_connect$c
+                  )
+is
+  data$c      varchar2(1000);
+  responce$a  jira_arr; --Ответ сервера
+  message$c varchar2(4000);
+  status$i integer;
+  null_param$e exception;
+begin
+  if key_name$c is null or link_key_name$c is null or link_type$c is null then
+    raise null_param$e;
+  end if;
+
+  data$c:='{"outwardIssue":{"key":"'key_name$c'"},'
+          '"inwardIssue": {"key":"'||link_key_name$c'"},'
+          '"type": {"name":"'||link_type$c'"}'
+          '}"';
+  
+  responce$a:= update_jira_issue(data$c => data$c
+                                ,type_request$i => 2 --POST
+                                ,api_method$i => jira_consts.c_api_method_other$i
+                                ,api_method$c => 'issueLink/');
+  
+  status$i:=jira_exchange_support.read_responce(responce$a, message$c);
+exception
+  when null_param$e then
+    raise_application_error(-20001, 'Пустые параметры в jira_exchange_support.add_link');
+  when others then
+    raise_application_error(-20001, dbms_utility.format_error_stack  dbms_utility.format_error_backtrace ||' jira_exchange_support.add_link'||val$c);
+end add_link;
 
 end jira_support;

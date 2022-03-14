@@ -46,5 +46,11 @@ function create_issue (key$c varchar2 := null --куда создаем зада
 function get_jira_issue(key_name$c   varchar2:=null
                         ) return clob;
 
+-- добавить связь
+procedure add_link(key_name$c varchar2:=null
+                  ,link_key_name$c varchar2:=null
+                  ,link_type$c varchar2:=jira_consts.c_link_connect$c
+                  );
+
 end jira_support;
 

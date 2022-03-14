@@ -8,4 +8,6 @@ c_api_method_other$i       constant integer := 3; -- стандартное об
 c_itype_task$c               constant varchar2(10) := 'Task'; -- Задача
 c_itype_bug$c                constant varchar2(10) := 'Bug'; -- Ошибка
 
+--Типы связей issueLinkType, поле name
+c_link_connect$c constant varchar2(20) := 'Связан';
 end jira_consts;
