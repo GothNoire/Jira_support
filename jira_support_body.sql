@@ -339,7 +339,6 @@ begin
                                 ,api_method$i => jira_consts.c_api_method_other$i
                                 ,api_method$c => 'issueLink/');
   
-  status$i:=jira_exchange_support.read_responce(responce$a, message$c);
 exception
   when null_param$e then
     raise_application_error(-20001, 'Пустые параметры в jira_exchange_support.add_link');
