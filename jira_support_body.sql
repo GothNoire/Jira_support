@@ -2,33 +2,33 @@ create or replace package body jira_support as
 
 c_name_pack$c constant varchar2(100) := 'jira_support';
 
---РђРґСЂРµСЃ РґРѕ Jira
+--Адрес до Jira
 url_jira$c        varchar2(1000):= c_data_support.get_const(1530);
---РђРґСЂРµСЃ РґР»СЏ РѕС‚РїСЂР°РІРєРё Р·Р°РїСЂРѕСЃР°
--- c_data_support.get_const(21) - Р°РґСЂРµСЃ СЃРµСЂРІРµСЂР° Р‘Р”
+--Адрес для отправки запроса
+-- c_data_support.get_const(21) - адрес сервера БД
 url_jira_api$c    varchar2(1000):= 'http://'||c_data_support.get_const(21)||'/https/'||url_jira$c||'/rest/api/2/';
-url_search_api$c  varchar2(1000):= 'http://'||c_data_support.get_const(21)||'/https/'||url_jira$c||'/rest/api/2/search?jql='; -- РїРѕРёСЃРє Р·Р°РґР°С‡
---https Р°РґСЂРµСЃ РґРѕ Jira
+url_search_api$c  varchar2(1000):= 'http://'||c_data_support.get_const(21)||'/https/'||url_jira$c||'/rest/api/2/search?jql='; -- поиск задач
+--https адрес до Jira
 url_jira_browse$c varchar2(1000):= 'https://'||url_jira$c||'/browse/';
 
 j_login$c         varchar2(100):= 'admin';
 j_pass$c          varchar2(100):= 'admin';
 
--- СЃС„РѕСЂРјРёСЂРѕРІР°С‚СЊ РґР°РЅРЅС‹Рµ РїР°СЂР°РјРµС‚СЂРѕРІ
-function get_jira_param_data(project$c      varchar2 := null --РєСѓРґР° СЃРѕР·РґР°РµРј Р·Р°РґР°С‡Сѓ (SD, DEV...)
-                            ,summary$c      varchar2 := null --РўРµРјР° Р·Р°РґР°С‡Рё
-                            ,description$c  varchar2 := null --РљРѕРјРјРµРЅС‚Р°СЂРёР№
-                            ,issuetype$c    varchar2 := null --С‚РёРї Р·Р°РґР°С‡Рё, Р·Р°РґР°РµС‚СЃСЏ "Bug" РёР»Рё "Task", РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ С‚Р°СЃРє
-                            ,reporter$c     varchar2 := null --РєРѕРіРѕ РЅР°Р·РЅР°С‡РёС‚СЊ Р°РІС‚РѕСЂРѕРј, РµСЃР»Рё РїСѓСЃС‚Рѕ, 
-                                                             --С‚Рѕ Р°РІС‚РѕСЂРѕРј Р±СѓРґРµС‚ С‚РѕС‚ С‡СЊРё Р»РѕРіРёРЅ Рё РїР°СЃСЃ РёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ РІ Р°РІС‚РѕСЂРёР·Р°С†РёРё
-                            ,assignie$c     varchar2 := null --РЅР° РєРѕРіРѕ РЅР°Р·РЅР°С‡РµРЅР°, РµСЃР»Рё РїСѓСЃС‚Рѕ РЅР°Р·РЅР°С‡Р°РµС‚СЃСЏ РЅР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ 
-                                                             --РёР»Рё РїРѕ РїСЂР°РІРёР»Сѓ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ РєРѕРјРїРѕРЅРµРЅС‚Р°
-                            ,pc_name$c      varchar2 := null --РёРјСЏ РџРљ
-                            ,components$i   integer  := null --РµСЃР»Рё РµСЃС‚СЊ РєРѕРјРїРѕРЅРµРЅС‚Р°, Р·РґРµСЃСЊ СѓРєР°Р·С‹РІР°РµРј РµРµ ID
-                            ,priority$i     integer  := null -- РїСЂРёРѕСЂРёС‚РµС‚
-                            ,status$i       integer  := null -- СЃС‚Р°С‚СѓСЃ
-                            ,comment$c      varchar2 := null -- РєРѕРјРјРµРЅС‚Р°СЂРёР№
-                            ,other_params$c varchar2 := null --РІРѕР·РјРѕР¶РЅРѕ РЅСѓР¶РЅРѕ Р±СѓРґРµС‚ СѓРєР°Р·С‹РІР°С‚СЊ Рё РґСЂСѓРіРёРµ РїР°СЂР°РјРµС‚СЂС‹
+-- сформировать данные параметров
+function get_jira_param_data(project$c      varchar2 := null --куда создаем задачу (SD, DEV...)
+                            ,summary$c      varchar2 := null --Тема задачи
+                            ,description$c  varchar2 := null --Комментарий
+                            ,issuetype$c    varchar2 := null --тип задачи, задается "Bug" или "Task", по умолчанию таск
+                            ,reporter$c     varchar2 := null --кого назначить автором, если пусто, 
+                                                             --то автором будет тот чьи логин и пасс используются в авторизации
+                            ,assignie$c     varchar2 := null --на кого назначена, если пусто назначается на пользователя по умолчанию 
+                                                             --или по правилу в зависимости от компонента
+                            ,pc_name$c      varchar2 := null --имя ПК
+                            ,components$i   integer  := null --если есть компонента, здесь указываем ее ID
+                            ,priority$i     integer  := null -- приоритет
+                            ,status$i       integer  := null -- статус
+                            ,comment$c      varchar2 := null -- комментарий
+                            ,other_params$c varchar2 := null --возможно нужно будет указывать и другие параметры
                           ) return varchar2
 is
   debug$n number:=0;
@@ -44,60 +44,60 @@ end;
 
 begin
   debug$n:=1;
-  --РєР»РµРёРј json Р·Р°РїСЂРѕСЃ
+  --клеим json запрос
 --  data$c := '{ "fields": { ';
   data$c:='';
   
-  -- РїСЂРѕРµРєС‚ SD, DEV
+  -- проект SD, DEV
   if project$c is not null then
     set_data('"project": {"key": "'||project$c||'"}');
   end if;
 
-  -- С‚РёРї Р·Р°РґР°С‡Рё, Р·Р°РґР°РµС‚СЃСЏ "Bug" РёР»Рё "Task", РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ С‚Р°СЃРє
+  -- тип задачи, задается "Bug" или "Task", по умолчанию таск
   if issuetype$c is not null then
     set_data('"issuetype": {"name": "'||issuetype$c||'"}');
   end if;
   
-  -- РўРµРјР° Р·Р°РґР°С‡Рё
+  -- Тема задачи
   if summary$c is not null then
     set_data('"summary": "'||encoding_support.escape_json(summary$c)||'"');
   end if;
-  --РћРїРёСЃР°РЅРёРµ
+  --Описание
   if description$c is not null then
     set_data('"description": "'||encoding_support.escape_json(description$c)||'"');
   end if;
   
-  -- РђРІС‚РѕСЂ
+  -- Автор
   if reporter$c is not null then
     set_data('"reporter": {"name": "'||encoding_support.escape_json(reporter$c)||'"}');
   end if;
-  -- РёРјСЏ РєРѕРјРїСЊСЋС‚РµСЂР°
+  -- имя компьютера
   if pc_name$c is not null then
     set_data('"customfield_14305": "'||encoding_support.escape_json(pc_name$c)||'"');
   end if;
-  -- РєРѕРјРїРѕРЅРµРЅС‚Р° "РџРѕРґРґРµСЂР¶РєР° Р±РёР»Р»РёРЅРіР°"     
+  -- компонента "Поддержка биллинга"     
   if components$i is not null then
     set_data('"components": [{"id": "'||components$i||'"}]');
   end if;
   
-  -- РЅР° РєРѕРіРѕ РЅР°Р·РЅР°С‡РµРЅР°
+  -- на кого назначена
   if assignie$c is not null then
     set_data('"assignee": {"name": "'||encoding_support.escape_json(assignie$c)||'"}');
   end if;
-  -- РїСЂРёРѕСЂРёС‚РµС‚
+  -- приоритет
   if priority$i is not null then
     set_data('"priority": {"id": "'||priority$i||'"}');
   end if;
-  -- СЃС‚Р°С‚СѓСЃ
+  -- статус
   if status$i is not null then
     set_data('"status": {"id": "'||status$i||'"}');
   end if;
-  -- РєРѕРјРјРµРЅС‚Р°СЂРёР№
+  -- комментарий
   if comment$c is not null then
     set_data('"comment": [{"add": {"body": "'||encoding_support.escape_json(comment$c)||'"}}]');
   end if;
   
-  -- РїСЂРѕС‡РёРµ РїР°СЂР°РјРµС‚СЂС‹
+  -- прочие параметры
   if other_params$c is not null then
     set_data(other_params$c);
   end if;
@@ -117,12 +117,12 @@ exception
 end get_jira_param_data;
 
 
--- РѕР±РЅРѕРІРёС‚СЊ Р·Р°СЏРІРєСѓ РІ Jira
+-- обновить заявку в Jira
 function update_jira_issue(key_name$c varchar2 := null,
                            data$c varchar2 := null,
-                           type_request$i integer := null, -- С‚РёРї Р·Р°РїСЂРѕСЃР° 0-Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё, 1- GET, 2 - PUT
-                           api_method$i integer := jira_consts.c_api_method_issue$i, -- СЃРїРѕСЃРѕР± РѕР±СЂР°С‰РµРЅРёСЏ Рє API
-                           jql$c varchar2 := null, -- СЃС‚СЂРѕРєР° РїРѕРёСЃРєР° РґР»СЏ api_method$i = jira_consts.c_api_method_search$i
+                           type_request$i integer := null, -- тип запроса 0-автоматически, 1- GET, 2 - PUT
+                           api_method$i integer := jira_consts.c_api_method_issue$i, -- способ обращения к API
+                           jql$c varchar2 := null, -- строка поиска для api_method$i = jira_consts.c_api_method_search$i
                            api_method$c varchar2 := null
                           ) return jira_arr
 is
@@ -135,8 +135,8 @@ is
                           'jql$c='||jql$c||', '||
                           'api_method$c='||api_method$c||
                           ')';
-  responce$a jira_arr; -- РћС‚РІРµС‚ СЃРµСЂРІРµСЂР°
-  status_code$c varchar2(1000); -- РЎС‚Р°С‚СѓСЃ РІС‹РїРѕР»РЅРµРЅРёСЏ Р·Р°РїСЂРѕСЃР°
+  responce$a jira_arr; -- Ответ сервера
+  status_code$c varchar2(1000); -- Статус выполнения запроса
   request_method$c varchar2(10) := 'POST';
   the_data$c varchar2(32767) := data$c;
   size$i integer := 0;
@@ -146,22 +146,22 @@ is
   err$c varchar2(1000);
   err$e exception;
 begin
-  debug$n := 1; -- РїСЂРѕРІРµСЂСЏРµРј РІС…РѕРґРЅС‹Рµ РїР°СЂР°РјРµС‚СЂС‹
+  debug$n := 1; -- проверяем входные параметры
   if (api_method$i = jira_consts.c_api_method_search$i and jql$c is null) then
-    err$c := 'Р”Р»СЏ РїРѕРёСЃРєР° Р·Р°РґР°С‡ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ Р·Р°РїРѕР»РЅРµРЅ РїР°СЂР°РјРµС‚СЂ РїРѕРёСЃРєР°!';
+    err$c := 'Для поиска задач должен быть заполнен параметр поиска!';
     raise err$e;
   end if; 
   if (api_method$i = jira_consts.c_api_method_other$i and api_method$c is null) then
-    err$c := 'РќРµРѕР±С…РѕРґРёРјРѕ СѓРєР°Р·Р°С‚СЊ РјРµС‚РѕРґ!';
+    err$c := 'Необходимо указать метод!';
     raise err$e;
   end if;
 
   debug$n := 2;
-  if nvl(api_method$i, jira_consts.c_api_method_issue$i) in (jira_consts.c_api_method_issue$i -- СЃС‚Р°РЅРґР°СЂС‚РЅРѕРµ РѕР±СЂР°С‰РµРЅРёРµ Рє API (РїРѕ Р·Р°СЏРІРєРµ)
-                                                            ,jira_consts.c_api_method_other$i) --СЃС‚Р°РЅРґР°СЂС‚РЅРѕРµ РѕР±СЂР°С‰РµРЅРёРµ Рє API (РґСЂСѓРіРёРµ API РјРµС‚РѕРґС‹)
+  if nvl(api_method$i, jira_consts.c_api_method_issue$i) in (jira_consts.c_api_method_issue$i -- стандартное обращение к API (по заявке)
+                                                            ,jira_consts.c_api_method_other$i) --стандартное обращение к API (другие API методы)
   then 
     if (nvl(type_request$i, 0) = 1) then
-      request_method$c := 'GET'; -- С‡С‚РµРЅРёРµ РґР°РЅРЅС‹С…
+      request_method$c := 'GET'; -- чтение данных
     elsif (type_request$i = 2) then
       request_method$c := 'POST';
     elsif (key_name$c is not null) then
@@ -175,42 +175,42 @@ begin
         the_data$c := '{ "fields": { '||data$c||'}}';
       end if;
     end if;
-  elsif (api_method$i = jira_consts.c_api_method_search$i) then -- РѕР±СЂР°С‰РµРЅРёРµ Рє API РїРѕРёСЃРєР°
+  elsif (api_method$i = jira_consts.c_api_method_search$i) then -- обращение к API поиска
     request_method$c := 'GET';
     the_data$c := null;
   end if;
 
-  debug$n := 3;-- РЎРѕР·РґР°РЅРёРµ Р·Р°РїСЂРѕСЃР°
+  debug$n := 3;-- Создание запроса
   utl_http.set_body_charset('utf-8');
 
   debug$n := 4;
   utl_http.set_transfer_timeout(60);
 
   debug$n := 5;
-  if (nvl(api_method$i, jira_consts.c_api_method_issue$i) = jira_consts.c_api_method_issue$i) then -- СЃС‚Р°РЅРґР°СЂС‚РЅРѕРµ РѕР±СЂР°С‰РµРЅРёРµ Рє API (РїРѕ Р·Р°СЏРІРєРµ)
+  if (nvl(api_method$i, jira_consts.c_api_method_issue$i) = jira_consts.c_api_method_issue$i) then -- стандартное обращение к API (по заявке)
     req$r := utl_http.begin_request(url_jira_api$c||'issue/'||key_name$c, request_method$c, 'HTTP/1.1');
-  elsif (api_method$i = jira_consts.c_api_method_search$i) then -- РѕР±СЂР°С‰РµРЅРёРµ Рє API РїРѕРёСЃРєР°
+  elsif (api_method$i = jira_consts.c_api_method_search$i) then -- обращение к API поиска
     req$r := utl_http.begin_request(url_search_api$c||jql$c, request_method$c, 'HTTP/1.1');
   end if;
 
-  debug$n := 6; -- РћРїСЂРµРґРµР»СЏРµРј СЂР°Р·РјРµСЂ РґР°РЅРЅС‹С… РґР»СЏ POST Рё PUT Р·Р°РїСЂРѕСЃРѕРІ
+  debug$n := 6; -- Определяем размер данных для POST и PUT запросов
   size$i := nvl(length(encoding_support.utf8(the_data$c)), 0);
 
-  debug$n := 7; -- РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј Р·Р°РіРѕР»РѕРІРєРё
+  debug$n := 7; -- Устанавливаем заголовки
   utl_http.set_authentication(req$r, j_login$c, j_pass$c);
   utl_http.set_header(req$r, 'Content-Type', 'application/json; charset=utf-8');
   utl_http.set_header(req$r, 'Content-Length', size$i);
   
-  debug$n := 8; -- Р—Р°РїРёСЃСЊ post-РґР°РЅРЅС‹С… РґР»СЏ POST Рё PUT Р·Р°РїСЂРѕСЃРѕРІ
+  debug$n := 8; -- Запись post-данных для POST и PUT запросов
   utl_http.write_text(req$r, the_data$c);
 
-  debug$n := 9; -- РћС‚РїСЂР°РІРєР° Р·Р°РїСЂРѕСЃР° Рё РѕР¶РёРґР°РЅРёРµ РѕС‚РІРµС‚Р°
+  debug$n := 9; -- Отправка запроса и ожидание ответа
   resp$r := utl_http.get_response(req$r);
 
-  debug$n := 10; -- Р—Р°РіРѕР»РѕРІРєРё Рё СЃС‚Р°С‚СѓСЃ (РЅСѓР¶РЅС‹ С‚РѕР»СЊРєРѕ РґР»СЏ РґРёР°РіРЅРѕСЃС‚РёРєРё)
+  debug$n := 10; -- Заголовки и статус (нужны только для диагностики)
   status_code$c := to_char(resp$r.status_code);
 
-  debug$n := 11; -- Р§РёС‚Р°РµРј С‚РµР»Рѕ РѕС‚РІРµС‚Р° РІ РјР°СЃСЃРёРІ
+  debug$n := 11; -- Читаем тело ответа в массив
   responce$a.delete;
   begin
     loop
@@ -226,7 +226,7 @@ begin
       utl_http.end_response(resp$r);
   end;
 
-  debug$n := 13; -- РѕС‡РёСЃС‚РёРј РєСѓРєРё
+  debug$n := 13; -- очистим куки
   utl_http.clear_cookies();
 
   return responce$a;
@@ -238,40 +238,40 @@ exception
 end update_jira_issue;
 
 
---СЃРѕР·РґР°РЅРёРµ Р·Р°СЏРІРєРё РІ Jira
-function create_issue (key$c varchar2 := null --РєСѓРґР° СЃРѕР·РґР°РµРј Р·Р°РґР°С‡Сѓ (SD, DEV...)
-                      ,summary$c varchar2 := null --РўРµРјР° Р·Р°РґР°С‡Рё
-                      ,description$c varchar2 := null --РћРїРёСЃР°РЅРёРµ Р·Р°РґР°С‡Рё
-                      ,issuetype$c varchar2 := jira_consts.c_itype_task$c --С‚РёРї Р·Р°РґР°С‡Рё, Р·Р°РґР°РµС‚СЃСЏ "Bug" РёР»Рё "Task", РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ С‚Р°СЃРє
-                      ,reporter$c varchar2 := null --РєРѕРіРѕ РЅР°Р·РЅР°С‡РёС‚СЊ Р°РІС‚РѕСЂРѕРј, РµСЃР»Рё РїСѓСЃС‚Рѕ, 
-                                                   --С‚Рѕ Р°РІС‚РѕСЂРѕРј Р±СѓРґРµС‚ С‚РѕС‚ С‡СЊРё Р»РѕРіРёРЅ Рё РїР°СЃСЃ РёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ РІ Р°РІС‚РѕСЂРёР·Р°С†РёРё
-                      ,assignie$c varchar2 := null --РЅР° РєРѕРіРѕ РЅР°Р·РЅР°С‡РµРЅР°, РµСЃР»Рё РїСѓСЃС‚Рѕ РЅР°Р·РЅР°С‡Р°РµС‚СЃСЏ РЅР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ 
-                                                   --РёР»Рё РїРѕ РїСЂР°РІРёР»Сѓ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ РєРѕРјРїРѕРЅРµРЅС‚Р°
-                      ,pc_name$c varchar2 := null --РёРјСЏ РџРљ
-                      ,components$i integer := null --РµСЃР»Рё РµСЃС‚СЊ РєРѕРјРїРѕРЅРµРЅС‚Р°, Р·РґРµСЃСЊ СѓРєР°Р·С‹РІР°РµРј РµРµ ID
-                      ,other_params$c varchar2 := null --РІРѕР·РјРѕР¶РЅРѕ РЅСѓР¶РЅРѕ Р±СѓРґРµС‚ СѓРєР°Р·С‹РІР°С‚СЊ Рё РґСЂСѓРіРёРµ РїР°СЂР°РјРµС‚СЂС‹
+--создание заявки в Jira
+function create_issue (key$c varchar2 := null --куда создаем задачу (SD, DEV...)
+                      ,summary$c varchar2 := null --Тема задачи
+                      ,description$c varchar2 := null --Описание задачи
+                      ,issuetype$c varchar2 := jira_consts.c_itype_task$c --тип задачи, задается "Bug" или "Task", по умолчанию таск
+                      ,reporter$c varchar2 := null --кого назначить автором, если пусто, 
+                                                   --то автором будет тот чьи логин и пасс используются в авторизации
+                      ,assignie$c varchar2 := null --на кого назначена, если пусто назначается на пользователя по умолчанию 
+                                                   --или по правилу в зависимости от компонента
+                      ,pc_name$c varchar2 := null --имя ПК
+                      ,components$i integer := null --если есть компонента, здесь указываем ее ID
+                      ,other_params$c varchar2 := null --возможно нужно будет указывать и другие параметры
                       ) return jira_arr
 is
-  data$c varchar2(32767); --Р”Р°РЅРЅС‹Рµ РґР»СЏ РѕС‚РїСЂР°РІРєРё РІ Р·Р°РїСЂРѕСЃРµ(РґР»СЏ POST Рё PUT Р·Р°РїСЂРѕСЃРѕРІ)
-  responce$a jira_arr; --РћС‚РІРµС‚ СЃРµСЂРІРµСЂР°
+  data$c varchar2(32767); --Данные для отправки в запросе(для POST и PUT запросов)
+  responce$a jira_arr; --Ответ сервера
   debug$n number;
 begin
   debug$n:=1;
   data$c:=get_jira_param_data(
-         project$c      => key$c          --РєСѓРґР° СЃРѕР·РґР°РµРј Р·Р°РґР°С‡Сѓ (SD, DEV...)
-        ,summary$c      => summary$c      --РўРµРјР° Р·Р°РґР°С‡Рё
-        ,description$c  => description$c  --РћРїРёСЃР°РЅРёРµ Р·Р°РґР°С‡Рё
-        ,issuetype$c    => issuetype$c    --С‚РёРї Р·Р°РґР°С‡Рё, Р·Р°РґР°РµС‚СЃСЏ "Bug" РёР»Рё "Task", РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ С‚Р°СЃРє
-        ,reporter$c     => reporter$c     --РєРѕРіРѕ РЅР°Р·РЅР°С‡РёС‚СЊ Р°РІС‚РѕСЂРѕРј, РµСЃР»Рё РїСѓСЃС‚Рѕ, 
-                                          --С‚Рѕ Р°РІС‚РѕСЂРѕРј Р±СѓРґРµС‚ С‚РѕС‚ С‡СЊРё Р»РѕРіРёРЅ Рё РїР°СЃСЃ РёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ РІ Р°РІС‚РѕСЂРёР·Р°С†РёРё
-        ,assignie$c     => assignie$c     --РЅР° РєРѕРіРѕ РЅР°Р·РЅР°С‡РµРЅР°, РµСЃР»Рё РїСѓСЃС‚Рѕ РЅР°Р·РЅР°С‡Р°РµС‚СЃСЏ РЅР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ 
-                                          --РёР»Рё РїРѕ РїСЂР°РІРёР»Сѓ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ РєРѕРјРїРѕРЅРµРЅС‚Р°
-        ,pc_name$c      => pc_name$c      --РёРјСЏ РџРљ
-        ,components$i   => components$i   --РµСЃР»Рё РµСЃС‚СЊ РєРѕРјРїРѕРЅРµРЅС‚Р°, Р·РґРµСЃСЊ СѓРєР°Р·С‹РІР°РµРј РµРµ ID
-        ,other_params$c => other_params$c --РІРѕР·РјРѕР¶РЅРѕ РЅСѓР¶РЅРѕ Р±СѓРґРµС‚ СѓРєР°Р·С‹РІР°С‚СЊ Рё РґСЂСѓРіРёРµ РїР°СЂР°РјРµС‚СЂС‹, РѕСЃС‚Р°РІР»СЋ РїРµСЂРµРјРµРЅРЅСѓСЋ РїРѕРґ СЌС‚Рѕ РґРµР»Рѕ
+         project$c      => key$c          --куда создаем задачу (SD, DEV...)
+        ,summary$c      => summary$c      --Тема задачи
+        ,description$c  => description$c  --Описание задачи
+        ,issuetype$c    => issuetype$c    --тип задачи, задается "Bug" или "Task", по умолчанию таск
+        ,reporter$c     => reporter$c     --кого назначить автором, если пусто, 
+                                          --то автором будет тот чьи логин и пасс используются в авторизации
+        ,assignie$c     => assignie$c     --на кого назначена, если пусто назначается на пользователя по умолчанию 
+                                          --или по правилу в зависимости от компонента
+        ,pc_name$c      => pc_name$c      --имя ПК
+        ,components$i   => components$i   --если есть компонента, здесь указываем ее ID
+        ,other_params$c => other_params$c --возможно нужно будет указывать и другие параметры, оставлю переменную под это дело
         );
 
-  -- РЎРѕР·РґР°С‚СЊ Р·Р°СЏРІРєСѓ РІ Jira         
+  -- Создать заявку в Jira         
   debug$n:=2;
   responce$a:= update_jira_issue(null, data$c );
   
@@ -282,11 +282,11 @@ exception
       ||' data$c='||substr(data$c,0,3000)||']');
 end create_issue;
 
--- РїСЂРѕС‡РёС‚Р°С‚СЊ Р·Р°СЏРІРєСѓ РёР· Jira         
+-- прочитать заявку из Jira         
 function get_jira_issue(key_name$c   varchar2:=null
                         ) return clob
 is
-  responce$a  jira_arr; --РћС‚РІРµС‚ СЃРµСЂРІРµСЂР°
+  responce$a  jira_arr; --Ответ сервера
   json$cl     clob:=empty_clob;
   debug$n     number:=0;
 begin
@@ -313,14 +313,14 @@ exception
       ||' key_name$c='||key_name$c);
 end get_jira_issue;    
 
--- РґРѕР±Р°РІРёС‚СЊ СЃРІСЏР·СЊ
+-- добавить связь
 procedure add_link(key_name$c varchar2:=null
                   ,link_key_name$c varchar2:=null
                   ,link_type$c varchar2:=jira_consts.c_link_connect$c
                   )
 is
   data$c      varchar2(1000);
-  responce$a  jira_arr; --РћС‚РІРµС‚ СЃРµСЂРІРµСЂР°
+  responce$a  jira_arr; --Ответ сервера
   message$c varchar2(4000);
   status$i integer;
   null_param$e exception;
@@ -341,7 +341,7 @@ begin
   
 exception
   when null_param$e then
-    raise_application_error(-20001, 'РџСѓСЃС‚С‹Рµ РїР°СЂР°РјРµС‚СЂС‹ РІ jira_exchange_support.add_link');
+    raise_application_error(-20001, 'Пустые параметры в jira_exchange_support.add_link');
   when others then
     raise_application_error(-20001, dbms_utility.format_error_stack  dbms_utility.format_error_backtrace ||' jira_exchange_support.add_link'||val$c);
 end add_link;

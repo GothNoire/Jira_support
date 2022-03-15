@@ -2,51 +2,51 @@ create or replace package jira_support as
 
 is_debug$i      integer:=0;
 
--- СЃС„РѕСЂРјРёСЂРѕРІР°С‚СЊ РґР°РЅРЅС‹Рµ РїР°СЂР°РјРµС‚СЂРѕРІ
-function get_jira_param_data(project$c      varchar2 := null --РєСѓРґР° СЃРѕР·РґР°РµРј Р·Р°РґР°С‡Сѓ (SD, DEV...)
-                            ,summary$c      varchar2 := null --РўРµРјР° Р·Р°РґР°С‡Рё
-                            ,description$c  varchar2 := null --РћРїРёСЃР°РЅРёРµ Р·Р°РґР°С‡Рё
-                            ,issuetype$c    varchar2 := null --С‚РёРї Р·Р°РґР°С‡Рё, Р·Р°РґР°РµС‚СЃСЏ "Bug" РёР»Рё "Task", РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ С‚Р°СЃРє
-                            ,reporter$c     varchar2 := null --РєРѕРіРѕ РЅР°Р·РЅР°С‡РёС‚СЊ Р°РІС‚РѕСЂРѕРј, РµСЃР»Рё РїСѓСЃС‚Рѕ,
-                                                             --С‚Рѕ Р°РІС‚РѕСЂРѕРј Р±СѓРґРµС‚ С‚РѕС‚ С‡СЊРё Р»РѕРіРёРЅ Рё РїР°СЃСЃ РёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ РІ Р°РІС‚РѕСЂРёР·Р°С†РёРё
-                            ,assignie$c     varchar2 := null --РЅР° РєРѕРіРѕ РЅР°Р·РЅР°С‡РµРЅР°, РµСЃР»Рё РїСѓСЃС‚Рѕ РЅР°Р·РЅР°С‡Р°РµС‚СЃСЏ РЅР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ 
-                                                             --РёР»Рё РїРѕ РїСЂР°РІРёР»Сѓ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ РєРѕРјРїРѕРЅРµРЅС‚Р°
-                            ,pc_name$c      varchar2 := null --РёРјСЏ РџРљ
-                            ,components$i   integer  := null --РµСЃР»Рё РµСЃС‚СЊ РєРѕРјРїРѕРЅРµРЅС‚Р°, Р·РґРµСЃСЊ СѓРєР°Р·С‹РІР°РµРј РµРµ ID
-                            ,priority$i     integer  := null -- РїСЂРёРѕСЂРёС‚РµС‚
-                            ,status$i       integer  := null -- СЃС‚Р°С‚СѓСЃ
-                            ,comment$c      varchar2 := null -- РєРѕРјРјРµРЅС‚Р°СЂРёР№
-                            ,other_params$c varchar2 := null --РІРѕР·РјРѕР¶РЅРѕ РЅСѓР¶РЅРѕ Р±СѓРґРµС‚ СѓРєР°Р·С‹РІР°С‚СЊ Рё РґСЂСѓРіРёРµ РїР°СЂР°РјРµС‚СЂС‹
+-- сформировать данные параметров
+function get_jira_param_data(project$c      varchar2 := null --куда создаем задачу (SD, DEV...)
+                            ,summary$c      varchar2 := null --Тема задачи
+                            ,description$c  varchar2 := null --Описание задачи
+                            ,issuetype$c    varchar2 := null --тип задачи, задается "Bug" или "Task", по умолчанию таск
+                            ,reporter$c     varchar2 := null --кого назначить автором, если пусто,
+                                                             --то автором будет тот чьи логин и пасс используются в авторизации
+                            ,assignie$c     varchar2 := null --на кого назначена, если пусто назначается на пользователя по умолчанию 
+                                                             --или по правилу в зависимости от компонента
+                            ,pc_name$c      varchar2 := null --имя ПК
+                            ,components$i   integer  := null --если есть компонента, здесь указываем ее ID
+                            ,priority$i     integer  := null -- приоритет
+                            ,status$i       integer  := null -- статус
+                            ,comment$c      varchar2 := null -- комментарий
+                            ,other_params$c varchar2 := null --возможно нужно будет указывать и другие параметры
                           ) return varchar2;
 
--- РѕР±РЅРѕРІРёС‚СЊ Р·Р°СЏРІРєСѓ РІ Jira
+-- обновить заявку в Jira
 function update_jira_issue(key_name$c varchar2 := null,
                            data$c varchar2 := null,
-                           type_request$i integer := null, -- С‚РёРї Р·Р°РїСЂРѕСЃР° 0-Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё, 1- GET, 2 - PUT
-                           api_method$i integer := jira_consts.c_api_method_issue$i, -- СЃРїРѕСЃРѕР± РѕР±СЂР°С‰РµРЅРёСЏ Рє API
-                           jql$c varchar2 := null, -- СЃС‚СЂРѕРєР° РїРѕРёСЃРєР° РґР»СЏ api_method$i = jira_consts.c_api_method_search$i
+                           type_request$i integer := null, -- тип запроса 0-автоматически, 1- GET, 2 - PUT
+                           api_method$i integer := jira_consts.c_api_method_issue$i, -- способ обращения к API
+                           jql$c varchar2 := null, -- строка поиска для api_method$i = jira_consts.c_api_method_search$i
                            api_method$c varchar2 := null
                            ) return jira_arr;
 
---СЃРѕР·РґР°РЅРёРµ Р·Р°СЏРІРєРё РІ Jira
-function create_issue (key$c varchar2 := null --РєСѓРґР° СЃРѕР·РґР°РµРј Р·Р°РґР°С‡Сѓ (SD, DEV...)
-                      ,summary$c varchar2 := null --РўРµРјР° Р·Р°РґР°С‡Рё
-                      ,description$c varchar2 := null --РљРѕРјРјРµРЅС‚Р°СЂРёР№
-                      ,issuetype$c varchar2 := jira_consts.c_itype_task$c --С‚РёРї Р·Р°РґР°С‡Рё, Р·Р°РґР°РµС‚СЃСЏ "Bug" РёР»Рё "Task", РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ С‚Р°СЃРє
-                      ,reporter$c varchar2 := null --РєРѕРіРѕ РЅР°Р·РЅР°С‡РёС‚СЊ Р°РІС‚РѕСЂРѕРј, РµСЃР»Рё РїСѓСЃС‚Рѕ, 
-                                                   --С‚Рѕ Р°РІС‚РѕСЂРѕРј Р±СѓРґРµС‚ С‚РѕС‚ С‡СЊРё Р»РѕРіРёРЅ Рё РїР°СЃСЃ РёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ РІ Р°РІС‚РѕСЂРёР·Р°С†РёРё
-                      ,assignie$c varchar2 := null --РЅР° РєРѕРіРѕ РЅР°Р·РЅР°С‡РµРЅР°, РµСЃР»Рё РїСѓСЃС‚Рѕ РЅР°Р·РЅР°С‡Р°РµС‚СЃСЏ РЅР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ 
-                                                   --РёР»Рё РїРѕ РїСЂР°РІРёР»Сѓ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ РєРѕРјРїРѕРЅРµРЅС‚Р°
-                      ,pc_name$c varchar2 := null --РёРјСЏ РџРљ
-                      ,components$i integer := null --РµСЃР»Рё РµСЃС‚СЊ РєРѕРјРїРѕРЅРµРЅС‚Р°, Р·РґРµСЃСЊ СѓРєР°Р·С‹РІР°РµРј РµРµ ID
-                      ,other_params$c varchar2 := null --РІРѕР·РјРѕР¶РЅРѕ РЅСѓР¶РЅРѕ Р±СѓРґРµС‚ СѓРєР°Р·С‹РІР°С‚СЊ Рё РґСЂСѓРіРёРµ РїР°СЂР°РјРµС‚СЂС‹
+--создание заявки в Jira
+function create_issue (key$c varchar2 := null --куда создаем задачу (SD, DEV...)
+                      ,summary$c varchar2 := null --Тема задачи
+                      ,description$c varchar2 := null --Комментарий
+                      ,issuetype$c varchar2 := jira_consts.c_itype_task$c --тип задачи, задается "Bug" или "Task", по умолчанию таск
+                      ,reporter$c varchar2 := null --кого назначить автором, если пусто, 
+                                                   --то автором будет тот чьи логин и пасс используются в авторизации
+                      ,assignie$c varchar2 := null --на кого назначена, если пусто назначается на пользователя по умолчанию 
+                                                   --или по правилу в зависимости от компонента
+                      ,pc_name$c varchar2 := null --имя ПК
+                      ,components$i integer := null --если есть компонента, здесь указываем ее ID
+                      ,other_params$c varchar2 := null --возможно нужно будет указывать и другие параметры
                       ) return jira_arr;
 
--- РїСЂРѕС‡РёС‚Р°С‚СЊ Р·Р°СЏРІРєСѓ РёР· Jira         
+-- прочитать заявку из Jira         
 function get_jira_issue(key_name$c   varchar2:=null
                         ) return clob;
 
--- РґРѕР±Р°РІРёС‚СЊ СЃРІСЏР·СЊ
+-- добавить связь
 procedure add_link(key_name$c varchar2:=null
                   ,link_key_name$c varchar2:=null
                   ,link_type$c varchar2:=jira_consts.c_link_connect$c

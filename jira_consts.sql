@@ -1,13 +1,13 @@
--- РЎРїРѕСЃРѕР±С‹ РѕР±СЂР°С‰РµРЅРёСЏ Рє API Jira
+-- Способы обращения к API Jira
 create or replace package jira_consts
-c_api_method_issue$i       constant integer := 1; -- СЃС‚Р°РЅРґР°СЂС‚РЅРѕРµ РѕР±СЂР°С‰РµРЅРёРµ Рє API (СЃРѕР·РґР°РЅРёРµ Р·Р°РґР°С‡Рё РёР»Рё РїРѕР»СѓС‡РµРЅРёРµ РёРЅС„РѕСЂРјР°С†РёРё РїРѕ Р·Р°РґР°С‡Рё)
-c_api_method_search$i      constant integer := 2; -- РѕР±СЂР°С‰РµРЅРёРµ Рє API РїРѕРёСЃРєР° (РїРѕРёСЃРє Р·Р°РґР°С‡ РїРѕ С„РёР»СЊС‚СЂСѓ)
-c_api_method_other$i       constant integer := 3; -- СЃС‚Р°РЅРґР°СЂС‚РЅРѕРµ РѕР±СЂР°С‰РµРЅРёРµ Рє API (РґСЂСѓРіРёРµ API РјРµС‚РѕРґС‹)
+c_api_method_issue$i       constant integer := 1; -- стандартное обращение к API (создание задачи или получение информации по задачи)
+c_api_method_search$i      constant integer := 2; -- обращение к API поиска (поиск задач по фильтру)
+c_api_method_other$i       constant integer := 3; -- стандартное обращение к API (другие API методы)
 
--- РўРёРїС‹ Р·Р°РґР°С‡
-c_itype_task$c               constant varchar2(10) := 'Task'; -- Р—Р°РґР°С‡Р°
-c_itype_bug$c                constant varchar2(10) := 'Bug'; -- РћС€РёР±РєР°
+-- Типы задач
+c_itype_task$c               constant varchar2(10) := 'Task'; -- Задача
+c_itype_bug$c                constant varchar2(10) := 'Bug'; -- Ошибка
 
---РўРёРїС‹ СЃРІСЏР·РµР№ issueLinkType, РїРѕР»Рµ name
-c_link_connect$c constant varchar2(20) := 'РЎРІСЏР·Р°РЅ';
+--Типы связей issueLinkType, поле name
+c_link_connect$c constant varchar2(20) := 'Связан';
 end jira_consts;
